@@ -1,0 +1,36 @@
+.board-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+}
+
+.board-list li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.board-list li a {
+    text-decoration: none;
+    color: #333;
+    font-size: 18px;
+}
+
+.board-list li a:hover {
+    color: #0066cc;
+}
+
+.date {
+    color: #666;
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
