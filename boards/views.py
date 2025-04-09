@@ -14,6 +14,9 @@ from reportlab.pdfgen import canvas
 from io import BytesIO
 from django.http import JsonResponse
 import json
+from django.http import JsonResponse
+
+from django.views.decorators.csrf import csrf_exempt
 def home(request):
     boards = Board.objects.all().order_by('-created_at')
     return render(request, 'boards/home.html', {'boards': boards})
@@ -37,19 +40,23 @@ def board_view(request, board_id):
         # Для PDF используем специальный шаблон
         return render(request, 'boards/pdf_board.html', {
             'board': board,
-            'pdf_url': board.pdf_file.url
+            'pdf_url': board.pdf_file.url,
+            'saved_drawing': board.drawing_data
         })
     else:
         # Обычная доска для рисования
-        return render(request, 'boards/board.html', {'board': board})
+        return render(request, 'boards/board2.html', {
+            'board': board,
+            'drawing_data': board.drawing_data
+
+
+        })
 
 
 def show_pdf(request, board_id):
     board = get_object_or_404(Board, id=board_id)
     if not board.pdf_file:
         return HttpResponse(status=404)
-
-    # Открываем PDF файл и возвращаем как response
     file_path = board.pdf_file.path
     return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
 
@@ -60,3 +67,11 @@ def delete_board(request, board_id):
     return redirect('boards:home')
 
 
+@csrf_exempt
+def save_board(request, board_id):
+    if request.method == 'POST':
+        board = get_object_or_404(Board, id=board_id)
+        data = json.loads(request.body)
+        board.drawing_data = data.get('image_data')
+        board.save()
+        return JsonResponse({'status': 'success'})
