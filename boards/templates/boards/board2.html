@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="board-container">
+    <h2>{{ board.title }}</h2>
+    
+    {% if board.pdf_file %}
+    <div class="pdf-container">
+        <embed src="{{ board.pdf_file.url }}" type="application/pdf" width="100%" height="500px">
+    </div>
+    {% endif %}
+    
+    <div class="drawing-area">
+        <canvas id="drawingCanvas" width="800" height="600"></canvas>
+    </div>
+    
+    <div class="toolbar">
+        <button id="penTool" class="btn">Карандаш</button>
+        <button id="clearBtn" class="btn">Очистить</button>
+        <button id="saveBtn" class="btn">Сохранить</button>
+
+    </div>
+    
+    {% csrf_token %}
+</div>
+
+<link rel="stylesheet" href="{% static 'boards/css/board.css' %}">
+<script src="{% static 'boards/js/drawing.js' %}"></script>
+
+<script>
+    // Инициализация canvas с восстановлением рисунка
+    document.addEventListener('DOMContentLoaded', function() {
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Восстановление сохраненного рисунка
+        {% if board.drawing_data %}
+        const savedImage = new Image();
+        savedImage.onload = function() {
+            ctx.drawImage(savedImage, 0, 0, canvas.width, canvas.height);
+        };
+        savedImage.src = '{{ board.drawing_data|safe }}';
+        {% endif %}
+    });
+
+    function resizeCanvases() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            pdfCanvas.width = width;
+            pdfCanvas.height = height;
+            drawingCanvas.width = width;
+            drawingCanvas.height = height;
+        }
+
+    window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+    // Изменение цвета и размера кисти
+        document.getElementById('color-picker').addEventListener('input', function(e) {
+            currentColor = e.target.value;
+        });
+
+        document.getElementById('brush-size').addEventListener('input', function(e) {
+            brushSize = e.target.value;
+        });
+
+    document.getElementById('color-picker').addEventListener('change', function(e) {
+            currentColor = e.target.value;
+        });
+</script>
+{% endblock %}
