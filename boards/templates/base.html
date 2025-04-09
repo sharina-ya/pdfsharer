@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PDF-SHARER{% endblock %}</title>
+    {% load static %}
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+        <a href="{% url 'boards:create_board' %}">Создать доску</a>
+
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+</body>
+</html>
