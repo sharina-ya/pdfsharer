@@ -1,0 +1,76 @@
+{% extends "boards/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h2>Create New Board</h2>
+    <a href="{% url 'boards:home' %}" class="btn btn-secondary mb-3">← Back to list</a>
+
+    <form method="post" enctype="multipart/form-data" class="board-form">
+        {% csrf_token %}
+
+        <div class="form-group">
+
+            {{ form.title }}
+            {% if form.title.errors %}
+                <div class="error">{{ form.title.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+
+            {{ form.pdf_file }}
+            {% if form.pdf_file.errors %}
+                <div class="error">{{ form.pdf_file.errors }}</div>
+            {% endif %}
+            <small class="form-text text-muted">Supported formats: PDF, PPT, DOCX</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create Board</button>
+    </form>
+</div>
+
+<style>
+    .container {
+        max-width: 600px;
+        margin: 30px auto;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    input[type="text"], input[type="file"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    .error {
+        color: #dc3545;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="home-container">
+    <div class="header">
+        <h1 class="title">Мои доски</h1>
+        <a href="{% url 'boards:create_board' %}" class="create-btn">
+            <i class="fas fa-plus"></i> Новая доска
+        </a>
+    </div>
+
+    <div class="board-grid">
+        {% for board in boards %}
+        <div class="board-card">
+            <div class="card-content">
+                <h3>{{ board.title }}</h3>
+                <p class="date">{{ board.created_at|date:"d M Y, H:i" }}</p>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'boards:boards' board.id %}" class="action-btn open-btn">
+                    <i class="fas fa-pencil-alt"></i> Открыть
+                </a>
+                <form action="{% url 'boards:delete_board' board.id %}" method="post" class="delete-form">
+                    {% csrf_token %}
+                    <button type="submit" class="action-btn delete-btn">
+                        <i class="fas fa-trash"></i> Удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <i class="fas fa-clipboard-list"></i>
+            <p>У вас пока нет досок</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" href="{% static 'boards/css/home.css' %}">
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForms = document.querySelectorAll('.delete-form');
+
+    deleteForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (confirm('Вы уверены, что хотите удалить эту доску?')) {
+                this.submit();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
