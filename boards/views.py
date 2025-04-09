@@ -33,20 +33,15 @@ def create_board(request):
 def board_view(request, board_id):
     board = get_object_or_404(Board, id=board_id)
 
-    if request.method == 'POST':
-        if 'drawing_data' in request.POST:
-            board.drawing_data = request.POST['drawing_data']
-            board.save()
-            return JsonResponse({'status': 'success'})
-
-    context = {
-        'board': board,
-        'pdf_url': board.pdf_file.url if board.pdf_file else None,
-        'drawing_data': board.drawing_data
-    }
-    return render(request, 'boards/board.html', context)
-
-
+    if board.pdf_file:
+        # Для PDF используем специальный шаблон
+        return render(request, 'boards/pdf_board.html', {
+            'board': board,
+            'pdf_url': board.pdf_file.url
+        })
+    else:
+        # Обычная доска для рисования
+        return render(request, 'boards/board.html', {'board': board})
 
 
 def show_pdf(request, board_id):
@@ -54,21 +49,9 @@ def show_pdf(request, board_id):
     if not board.pdf_file:
         return HttpResponse(status=404)
 
-    # рисование поверх PDF
-    packet = BytesIO()
-    can = canvas.Canvas(packet)
-    can.save()
-
-    existing_pdf = PdfReader(board.pdf_file.path)
-    output = PdfWriter()
-
-    for page in existing_pdf.pages:
-        page.merge_page(PdfReader(packet).pages[0])
-        output.add_page(page)
-
-    response = HttpResponse(content_type='application/pdf')
-    output.write(response)
-    return response
+    # Открываем PDF файл и возвращаем как response
+    file_path = board.pdf_file.path
+    return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
 
 @require_POST
 def delete_board(request, board_id):
