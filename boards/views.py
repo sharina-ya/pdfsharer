@@ -38,18 +38,22 @@ def board_view(request, board_id):
 
     if board.pdf_file:
         # Для PDF используем специальный шаблон
-        return render(request, 'boards/pdf_board.html', {
+        return render(request, 'boards/pdf2.html', {
             'board': board,
             'pdf_url': board.pdf_file.url,
             'saved_drawing': board.drawing_data
         })
     else:
-        # Обычная доска для рисования
+        if request.method == 'POST':
+            if 'drawing_data' in request.POST:
+                board.drawing_data = request.POST['drawing_data']
+                board.save()
+                return JsonResponse({'status': 'success'})
+
         return render(request, 'boards/board2.html', {
             'board': board,
+
             'drawing_data': board.drawing_data
-
-
         })
 
 
@@ -67,11 +71,13 @@ def delete_board(request, board_id):
     return redirect('boards:home')
 
 
+
 @csrf_exempt
-def save_board(request, board_id):
+def save_drawing(request, board_id):
     if request.method == 'POST':
         board = get_object_or_404(Board, id=board_id)
         data = json.loads(request.body)
-        board.drawing_data = data.get('image_data')
+        board.drawing_data = data.get('drawing_data')
         board.save()
         return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=400)
