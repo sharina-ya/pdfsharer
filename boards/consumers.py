@@ -11,7 +11,6 @@ class BoardConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
-
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -32,5 +31,9 @@ class BoardConsumer(AsyncWebsocketConsumer):
         )
 
     async def annotation_message(self, event):
-
         await self.send(text_data=json.dumps(event['data']))
+
+
+    async def board_message(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps(message))
