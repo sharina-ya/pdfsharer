@@ -1,3 +1,5 @@
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Board
@@ -8,11 +10,6 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, FileResponse
 from django.conf import settings
 from .models import Board
-import os
-from PyPDF2 import PdfReader, PdfWriter
-from reportlab.pdfgen import canvas
-from io import BytesIO
-from django.http import JsonResponse
 import json
 from django.http import JsonResponse
 
@@ -81,3 +78,13 @@ def save_drawing(request, board_id):
         board.save()
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=400)
+
+def broadcast_drawing(board_id, data):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'board_{board_id}',
+        {
+            'type': 'annotation_message',
+            'message': data
+        }
+    )
