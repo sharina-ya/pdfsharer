@@ -140,3 +140,17 @@ CHANNEL_LAYERS = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Разрешенные хосты
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.23.17.176']
+
+
+# Настройки для реального времени
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
