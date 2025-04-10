@@ -5,23 +5,51 @@ document.addEventListener('DOMContentLoaded', function() {
     let lastX = 0;
     let lastY = 0;
 
-    function setupCanvas() {
+    // Настройки по умолчанию
+    let currentColor = '#000000';
+    let brushSize = 3;
+
+    // Элементы управления
+    const colorPicker = document.getElementById('colorPicker');
+    const brushSizeControl = document.getElementById('brushSize');
+
+    // Инициализация холста
+    function initCanvas() {
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = brushSize;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
     }
 
+    // Обработчики рисования
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
 
-    canvas.addEventListener('mousedown', (e) => {
-        isDrawing = true;
-        [lastX, lastY] = [e.offsetX, e.offsetY];
+    // Инструменты
+    colorPicker.addEventListener('input', function() {
+        currentColor = this.value;
+        ctx.strokeStyle = currentColor;
     });
 
+    brushSizeControl.addEventListener('input', function() {
+        brushSize = this.value;
+        ctx.lineWidth = brushSize;
+    });
 
-    canvas.addEventListener('mousemove', (e) => {
+    document.getElementById('clearBtn').addEventListener('click', clearCanvas);
+    document.getElementById('saveBtn').addEventListener('click', saveDrawing);
+
+    // Функции
+    function startDrawing(e) {
+        isDrawing = true;
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+    }
+
+    function draw(e) {
         if (!isDrawing) return;
 
         ctx.beginPath();
@@ -30,21 +58,18 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.stroke();
 
         [lastX, lastY] = [e.offsetX, e.offsetY];
-    });
+    }
 
+    function stopDrawing() {
+        isDrawing = false;
+    }
 
-    canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mouseout', () => isDrawing = false);
-
-
-    document.getElementById('clearBtn').addEventListener('click', () => {
+    function clearCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-    });
+    }
 
-
-    document.getElementById('saveBtn').addEventListener('click', async function() {
-        const canvas = document.getElementById('drawingCanvas');
-        const drawingData = canvas.toDataURL();
+    async function saveDrawing() {
+        const drawingData = canvas.toDataURL('image/png');
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
         try {
@@ -58,13 +83,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (response.ok) {
-                alert('Рисунок сохранен!');
+                alert('Рисунок успешно сохранен!');
             }
         } catch (error) {
-            console.error('Ошибка:', error);
+            console.error('Ошибка сохранения:', error);
+            alert('Ошибка при сохранении рисунка');
         }
-    });
+    }
 
-    setupCanvas();
-    window.addEventListener('resize', setupCanvas);
+    // Инициализация
+    initCanvas();
+    window.addEventListener('resize', initCanvas);
 });
