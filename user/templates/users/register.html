@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Вход</title>
+    <title>Регистрация</title>
 </head>
 <body>
-    <h2>Вход</h2>
+    <h2>Регистрация</h2>
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit">Войти</button>
+        <button type="submit">Зарегистрироваться</button>
     </form>
 </body>
 </html>
