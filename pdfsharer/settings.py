@@ -35,9 +35,11 @@ INSTALLED_APPS = [
     'boards',
     'corsheaders',
     'channels',
+    'users',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -45,7 +47,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'pdfsharer.urls'
@@ -142,7 +144,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Разрешенные хосты
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.23.17.176']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.23.17.176', '192.168.120.246', '10.193.150.77']
 
 
 # Настройки для реального времени
@@ -154,3 +156,5 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+LOGIN_REDIRECT_URL = 'boards:boards'
