@@ -1,4 +1,4 @@
-подключение(2-ая ветка):
+эта main актуальная
 - создать второй терминал
 - сначала запустить: python manage.py runserver
 - потом: daphne pdfsharer.asgi:application --bind 0.0.0.0 --port 8000
