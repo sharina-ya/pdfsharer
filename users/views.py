@@ -13,12 +13,9 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            boards = Board.objects.all().order_by('-created_at')
-            return render(request, 'boards/home.html', {'boards': boards})
+            return redirect('boards/home.html')
 
     else:
         form = RegistrationForm()
     return render(request, 'users/register.html', {'form': form})
-
-from django.shortcuts import render
 
