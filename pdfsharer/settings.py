@@ -26,13 +26,13 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'boards',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'boards',
     'corsheaders',
     'channels',
     'users',
@@ -56,7 +56,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),  # Добавьте эту строку
+            os.path.join(BASE_DIR, 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -144,7 +144,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Разрешенные хосты
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.23.17.176', '192.168.120.246', '10.193.150.77']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.193.150.77', '192.168.120.246', '10.23.29.39', '192.168.95.246']
 
 
 # Настройки для реального времени
@@ -156,5 +156,5 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
-LOGIN_REDIRECT_URL = 'boards:boards'
+LOGIN_REDIRECT_URL = 'home'  # куда перекидывать после входа
+LOGOUT_REDIRECT_URL = 'home'  # куда перекидывать после выхода
