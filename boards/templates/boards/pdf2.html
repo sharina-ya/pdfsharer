@@ -118,6 +118,21 @@
                 loadSavedDrawing();
             });
         }
+        // Подключение WebSocket
+        const socket = new WebSocket(
+            `ws://${window.location.host}/ws/board/${boardId}/`
+        );
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            // Обработка входящих данных рисования
+            if (data.type === 'drawing') {
+                drawFromData(data);
+            }
+        };
+
+
+
 
         // Логика рисования
         drawingCanvas.addEventListener('mousedown', startDrawing);
@@ -138,9 +153,25 @@
             ctx.strokeStyle = currentColor;
             ctx.lineWidth = brushSize;
             ctx.lineCap = 'round';
+            sendDrawingData({
+                x: e.offsetX,
+                y: e.offsetY,
+                color: currentColor,
+                size: brushSize,
+                action: isDrawing ? 'draw' : 'move'
+            });
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(e.offsetX, e.offsetY);
+        }
+        // Отправка данных рисования
+        function sendDrawingData(data) {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    'type': 'drawing',
+                    'data': data
+                }));
+            }
         }
 
         function stopDrawing() {

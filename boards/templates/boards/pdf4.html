@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Контейнер для PDF с фиксированной высотой и скроллом -->
+<div id="pdf-scroll-container" style="height: 80vh; overflow-y: auto; background: #f0f0f0;">
+    <!-- Обертка для страниц -->
+    <div id="pdf-pages-wrapper" style="padding: 20px;">
+        {% if board.pdf_file %}
+            <div id="pdf-viewer"></div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+
+<script>
+    let drawingCanvas = null;
+    let drawingContext = null;
+    let isDrawing = false;
+    let lastX, lastY;
+
+    async function renderPDF(url) {
+        const pdfViewer = document.getElementById('pdf-viewer');
+        pdfViewer.innerHTML = ''; // Очистка предыдущего содержимого
+
+        // Инициализация PDF.js
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+
+        // Рендеринг всех страниц
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 });
+
+            // Создание контейнера для страницы
+            const pageDiv = document.createElement('div');
+            pageDiv.className = 'pdf-page';
+            pageDiv.style.marginBottom = '20px';
+
+            // Создание canvas для PDF
+            const pdfCanvas = document.createElement('canvas');
+            const pdfContext = pdfCanvas.getContext('2d');
+            pdfCanvas.height = viewport.height;
+            pdfCanvas.width = viewport.width;
+
+            // Рендеринг PDF
+            await page.render({
+                canvasContext: pdfContext,
+                viewport: viewport
+            }).promise;
+
+            // Создание canvas для рисования поверх PDF
+            const drawingCanvasPage = document.createElement('canvas');
+            drawingCanvasPage.height = viewport.height;
+            drawingCanvasPage.width = viewport.width;
+            drawingCanvasPage.style.position = 'absolute';
+            drawingCanvasPage.style.top = '0';
+            drawingCanvasPage.style.left = '0';
+
+            const drawingContextPage = drawingCanvasPage.getContext('2d');
+            drawingContextPage.globalCompositeOperation = 'destination-over';
+
+            // Объединение canvas
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.appendChild(pdfCanvas);
+            wrapper.appendChild(drawingCanvasPage);
+
+            pageDiv.appendChild(wrapper);
+            pdfViewer.appendChild(pageDiv);
+        }
+
+        // Автоматический скролл к началу
+        document.getElementById('pdf-scroll-container').scrollTo(0, 0);
+
+        // Добавление событий для рисования
+        const canvases = pdfViewer.querySelectorAll('canvas:last-child');
+        canvases.forEach((canvas) => {
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseleave', stopDrawing);
+        });
+    }
+
+    function startDrawing(event) {
+        isDrawing = true;
+        lastX = event.offsetX;
+        lastY = event.offsetY;
+    }
+
+    function draw(event) {
+        if (!isDrawing) return;
+        const canvas = event.target;
+        const context = canvas.getContext('2d');
+        context.beginPath();
+        context.strokeStyle = 'black';
+        context.lineWidth = 5;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.moveTo(lastX, lastY);
+        context.lineTo(event.offsetX, event.offsetY);
+        context.stroke();
+        lastX = event.offsetX;
+        lastY = event.offsetY;
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        {% if board.pdf_file %}
+            renderPDF("{{ board.pdf_file.url }}");
+        {% endif %}
+    });
+</script>
+
+<style>
+/* Стили для контейнера PDF */
+#pdf-scroll-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 5px;
+}
+
+/* Стили для отдельных страниц */
+.pdf-page {
+    background: white;
+    margin: 10px auto;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Гарантированное выравнивание по центру */
+#pdf-pages-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+</style>
+
+{% endblock %}
