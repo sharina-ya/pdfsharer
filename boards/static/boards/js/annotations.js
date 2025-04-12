@@ -1,21 +1,14 @@
-let isDrawing = false;
+// Подключение к WebSocket
+const socket = new WebSocket(
+    `ws://${window.location.host}/ws/board/${boardId}/`
+);
 
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', stopDrawing);
+socket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    drawAnnotation(data);
+};
 
-function startDrawing(e) {
-    isDrawing = true;
-    ctx.beginPath();
-    ctx.moveTo(e.offsetX, e.offsetY);
-}
-
-function draw(e) {
-    if (!isDrawing) return;
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-}
-
-function stopDrawing() {
-    isDrawing = false;
+// При создании аннотации отправляем через WebSocket
+function sendAnnotation(data) {
+    socket.send(JSON.stringify(data));
 }
