@@ -5,15 +5,14 @@ document.addEventListener('DOMContentLoaded', function() {
     let lastX = 0;
     let lastY = 0;
 
-    // Настройки по умолчанию
+
     let currentColor = '#000000';
     let brushSize = 3;
 
-    // Элементы управления
+
     const colorPicker = document.getElementById('colorPicker');
     const brushSizeControl = document.getElementById('brushSize');
 
-    // Инициализация холста
     function initCanvas() {
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
@@ -23,13 +22,13 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.lineJoin = 'round';
     }
 
-    // Обработчики рисования
+
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
 
-    // Инструменты
+
     colorPicker.addEventListener('input', function() {
         currentColor = this.value;
         ctx.strokeStyle = currentColor;
@@ -43,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('clearBtn').addEventListener('click', clearCanvas);
     document.getElementById('saveBtn').addEventListener('click', saveDrawing);
 
-    // Функции
+
     function startDrawing(e) {
         isDrawing = true;
         [lastX, lastY] = [e.offsetX, e.offsetY];
@@ -91,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Инициализация
+
     initCanvas();
     window.addEventListener('resize', initCanvas);
 });
