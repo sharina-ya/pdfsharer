@@ -1,249 +1,352 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ board.title }}</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
-        #pdf-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #f0f0f0;
-        }
-        #pdf-render {
-            max-width: 100%;
-            max-height: 100%;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        #drawing-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 10;
-            width: 100%;
-            height: 100%;
-            cursor: crosshair;
-        }
-        .toolbar {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            z-index: 100;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.3);
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .toolbar button {
-            padding: 5px 10px;
-            cursor: pointer;
-        }
-        #save-notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 1000;
-            display: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="toolbar">
-        <button id="clear-btn">Очистить</button>
-        <input type="color" id="color-picker" value="#000000">
-        <input type="range" id="brush-size" min="1" max="20" value="3">
-        <button id="save-btn">Сохранить доску</button>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="toolbar">
+    <button id="clear-btn">Очистить</button>
+    <button id="eraser-btn">Ластик</button>
+    <input type="color" id="color-picker" value="#000000">
+    <input type="range" id="brush-size" min="1" max="20" value="3">
+    <button id="save-btn">Сохранить доску</button>
+</div>
+
+<div id="pdf-scroll-container" style="height: 80vh; overflow-y: auto; background: #f0f0f0;">
+    <div id="pdf-pages-wrapper" style="padding: 20px;">
+        {% if board.pdf_file %}
+            <div id="pdf-viewer"></div>
+        {% endif %}
     </div>
+</div>
 
-    <div id="pdf-container">
-        <canvas id="pdf-render"></canvas>
-        <canvas id="drawing-canvas"></canvas>
-    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 
-    <div id="save-notification">Доска сохранена!</div>
+<script>
+    let isDrawing = false;
+    let currentColor = '#000000';
+    let brushSize = 3;
+    let canvases = [];
+    let isErasing = false;
+    const boardId = "{{ board.id }}";
+    let pdfScale = 1.5;
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
-    <script>
-        // Инициализация
-        const pdfCanvas = document.getElementById('pdf-render');
-        const drawingCanvas = document.getElementById('drawing-canvas');
-        const ctx = drawingCanvas.getContext('2d');
-        const boardId = '{{ board.id }}';
-        let isDrawing = false;
-        let currentColor = '#000000';
-        let brushSize = 3;
-        let pdfDoc = null;
+    const socket = new WebSocket(`ws://${window.location.host}/ws/board/${boardId}/`);
 
-        // Загрузка PDF
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'drawing') {
+            drawFromData(data.message);
+        } else if (data.type === 'clear') {
+            clearCanvas();
+        }
+    };
 
-        pdfjsLib.getDocument("{{ board.pdf_file.url }}").promise.then(function(pdf) {
-            pdfDoc = pdf;
-            renderPage(1);
+    socket.onopen = function() {
+        console.log("WebSocket connection established");
+    };
+
+    socket.onerror = function(error) {
+        console.error("WebSocket error:", error);
+    };
+
+    socket.onclose = function() {
+        console.log("WebSocket connection closed");
+    };
+
+    async function renderPDF(url) {
+        const pdfViewer = document.getElementById('pdf-viewer');
+        pdfViewer.innerHTML = '';
+
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: pdfScale });
+
+            const pageDiv = document.createElement('div');
+            pageDiv.className = 'pdf-page';
+            pageDiv.style.marginBottom = '20px';
+            pageDiv.style.position = 'relative';
+
+            const pdfCanvas = document.createElement('canvas');
+            const pdfContext = pdfCanvas.getContext('2d');
+            pdfCanvas.height = viewport.height;
+            pdfCanvas.width = viewport.width;
+            await page.render({
+                canvasContext: pdfContext,
+                viewport: viewport
+            }).promise;
+
+            const drawingCanvasPage = document.createElement('canvas');
+            drawingCanvasPage.height = viewport.height;
+            drawingCanvasPage.width = viewport.width;
+            drawingCanvasPage.style.position = 'absolute';
+            drawingCanvasPage.style.top = '0';
+            drawingCanvasPage.style.left = '0';
+
+            drawingCanvasPage.dataset.pageNumber = pageNum;
+            canvases.push(drawingCanvasPage);
+
+            pageDiv.appendChild(pdfCanvas);
+            pageDiv.appendChild(drawingCanvasPage);
+            pdfViewer.appendChild(pageDiv);
+
+            drawingCanvasPage.addEventListener('mousedown', startDrawing);
+            drawingCanvasPage.addEventListener('mousemove', draw);
+            drawingCanvasPage.addEventListener('mouseup', stopDrawing);
+            drawingCanvasPage.addEventListener('mouseout', stopDrawing);
+        }
+
+        // Загрузка сохраненных рисунков
+        loadSavedDrawings();
+
+        document.getElementById('pdf-scroll-container').scrollTo(0, 0);
+    }
+
+    function startDrawing(event) {
+        isDrawing = true;
+        const canvas = event.target;
+        const context = canvas.getContext('2d');
+        context.beginPath();
+        context.moveTo(event.offsetX, event.offsetY);
+
+        const pageNumber = canvas.dataset.pageNumber;
+
+        canvas.lastX = event.offsetX;
+        canvas.lastY = event.offsetY;
+    }
+
+    function draw(event) {
+        if (!isDrawing) return;
+
+        const canvas = event.target;
+        const context = canvas.getContext('2d');
+
+        if (isErasing) {
+            context.globalCompositeOperation = 'destination-out';
+            context.strokeStyle = 'rgba(0,0,0,1)';
+        } else {
+            context.globalCompositeOperation = 'source-over';
+            context.strokeStyle = currentColor;
+        }
+
+        context.lineWidth = brushSize;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.lineTo(event.offsetX, event.offsetY);
+        context.stroke();
+
+        const pageNumber = canvas.dataset.pageNumber;
+
+        sendDrawingData({
+            x: event.offsetX,
+            y: event.offsetY,
+            lastX: canvas.lastX,
+            lastY: canvas.lastY,
+            color: currentColor,
+            size: brushSize,
+            pageNumber: pageNumber,
+            isErasing: isErasing
         });
 
-        function renderPage(pageNum) {
-            pdfDoc.getPage(pageNum).then(function(page) {
-                const viewport = page.getViewport({ scale: 1.5 });
+        canvas.lastX = event.offsetX;
+        canvas.lastY = event.offsetY;
+    }
 
-                pdfCanvas.width = viewport.width;
-                pdfCanvas.height = viewport.height;
-                drawingCanvas.width = viewport.width;
-                drawingCanvas.height = viewport.height;
+    function stopDrawing() {
+        isDrawing = false;
+    }
 
-                // пдф
-                page.render({
-                    canvasContext: pdfCanvas.getContext('2d'),
-                    viewport: viewport
-                });
+    function sendDrawingData(data) {
+        socket.send(JSON.stringify({
+            type: 'drawing',
+            message: data,
+        }));
+    }
 
-                // Загрузка сохраненного рисунка
-                loadSavedDrawing();
-            });
-        }
-        // Подключение WebSocket
-        const socket = new WebSocket(
-            `ws://${window.location.host}/ws/board/${boardId}/`
-        );
+    function drawFromData(data) {
+        canvases.forEach(canvas => {
+            if (canvas.dataset.pageNumber == data.pageNumber) {
+                const context = canvas.getContext('2d');
 
-        socket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            // Обработка входящих данных рисования
-            if (data.type === 'drawing') {
-                drawFromData(data);
-            }
-        };
-
-
-
-
-        // Логика рисования
-        drawingCanvas.addEventListener('mousedown', startDrawing);
-        drawingCanvas.addEventListener('mousemove', draw);
-        drawingCanvas.addEventListener('mouseup', stopDrawing);
-        drawingCanvas.addEventListener('mouseout', stopDrawing);
-
-        function startDrawing(e) {
-            isDrawing = true;
-            ctx.beginPath();
-            ctx.moveTo(e.offsetX, e.offsetY);
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-
-            ctx.lineTo(e.offsetX, e.offsetY);
-            ctx.strokeStyle = currentColor;
-            ctx.lineWidth = brushSize;
-            ctx.lineCap = 'round';
-            sendDrawingData({
-                x: e.offsetX,
-                y: e.offsetY,
-                color: currentColor,
-                size: brushSize,
-                action: isDrawing ? 'draw' : 'move'
-            });
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(e.offsetX, e.offsetY);
-        }
-        // Отправка данных рисования
-        function sendDrawingData(data) {
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    'type': 'drawing',
-                    'data': data
-                }));
-            }
-        }
-
-        function stopDrawing() {
-            isDrawing = false;
-            ctx.beginPath();
-        }
-
-        document.getElementById('clear-btn').addEventListener('click', function() {
-            ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-        });
-
-        document.getElementById('color-picker').addEventListener('input', function(e) {
-            currentColor = e.target.value;
-        });
-
-        document.getElementById('brush-size').addEventListener('input', function(e) {
-            brushSize = e.target.value;
-        });
-
-        // Сохранение
-        document.getElementById('save-btn').addEventListener('click', function() {
-            const drawingData = drawingCanvas.toDataURL('image/png');
-            fetch(`{% url 'boards:save_drawing' board.id %}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    drawing_data: drawingData
-                })
-            }).then(response => {
-                if (response.ok) {
-                    showNotification();
+                if (data.isErasing) {
+                    context.globalCompositeOperation = 'destination-out';
+                    context.strokeStyle = 'rgba(0,0,0,1)';
+                } else {
+                    context.globalCompositeOperation = 'source-over';
+                    context.strokeStyle = data.color;
                 }
-            });
+
+                context.lineWidth = data.size;
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                context.beginPath();
+                context.moveTo(data.lastX, data.lastY);
+                context.lineTo(data.x, data.y);
+                context.stroke();
+            }
         });
+    }
 
-        function saveDrawing(drawingData) {
-            fetch(`/board/${boardId}/save_drawing/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    drawing_data: drawingData
-                })
-            }).then(response => {
-                if (response.ok) {
-                    showNotification();
-                }
-            });
+    function clearCanvas() {
+        canvases.forEach(canvas => {
+            const context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+        });
+    }
+
+    function sendClearSignal() {
+        socket.send(JSON.stringify({
+            type: 'clear',
+            message: {}
+        }));
+    }
+
+    document.getElementById('clear-btn').addEventListener('click', function() {
+        sendClearSignal();
+    });
+
+    document.getElementById('eraser-btn').addEventListener('click', function() {
+        isErasing = !isErasing;
+        this.classList.toggle('active');
+    });
+
+    document.getElementById('color-picker').addEventListener('input', function(e) {
+        currentColor = e.target.value;
+        isErasing = false;
+        document.getElementById('eraser-btn').classList.remove('active');
+    });
+
+    document.getElementById('brush-size').addEventListener('input', function(e) {
+        brushSize = e.target.value;
+    });
+    document.getElementById('save-btn').addEventListener('click', function() {
+    const pdfViewer = document.getElementById('pdf-viewer');
+    let drawingData = [];
+
+    canvases.forEach((canvas, index) => {
+        const drawingDataUrl = canvas.toDataURL();
+        drawingData.push({
+            pageNumber: index + 1,
+            drawingData: drawingDataUrl
+        });
+    });
+
+    fetch(`/${boardId}/save_drawing/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ drawing_data: JSON.stringify(drawingData) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert("Доска сохранена!");
+        } else {
+            alert("Ошибка при сохранении доски.");
         }
+    });
+});
+    function loadSavedDrawings() {
+    {% if board.drawing_data %}
+        const savedDrawingData = JSON.parse('{{ board.drawing_data|escapejs }}');
+        savedDrawingData.forEach(item => {
+            const pageNumber = item.pageNumber;
+            const drawingDataUrl = item.drawingData;
 
-        function loadSavedDrawing() {
-            {% if board.drawing_data %}
+            const canvas = canvases[pageNumber - 1];
+            if (canvas) {
+                const context = canvas.getContext('2d');
                 const img = new Image();
                 img.onload = function() {
-                    ctx.drawImage(img, 0, 0);
-                };
-                img.src = '{{ board.drawing_data|safe }}';
-            {% endif %}
-        }
+                    context.drawImage(img, 0, 0);
+                }
+                img.src = drawingDataUrl;
+            }
+        });
+    {% endif %}
+}
+    document.addEventListener('DOMContentLoaded', () => {
+        {% if board.pdf_file %}
+          renderPDF("{{ board.pdf_file.url }}");
+        {% endif %}
+    });
+</script>
 
-        function showNotification() {
-            const notification = document.getElementById('save-notification');
-            notification.style.display = 'block';
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 3000);
-        }
-    </script>
-</body>
-</html>
+
+<style>
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #fff;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+
+#pdf-scroll-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.2);
+    border-radius: 5px;
+
+}
+
+
+.pdf-page {
+    background: white;
+    margin: 10px auto;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#pdf-pages-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.toolbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    background: #e7f5ff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid #b0e2ff;
+}
+
+.toolbar button,
+.toolbar input[type="color"],
+.toolbar input[type="range"] {
+    padding: 8px 12px;
+    border: 1px solid #b0e2ff;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.toolbar button:hover {
+    background-color: #b0e2ff;
+    color: #fff;
+}
+
+
+.toolbar button#eraser-btn.active {
+    background-color: #b0e2ff;
+    color: #fff;
+}
+
+</style>
+
+{% endblock %}

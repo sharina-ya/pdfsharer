@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="toolbar">
+    <button id="clear-btn">Очистить</button>
+    <button id="eraser-btn">Ластик</button>
+    <input type="color" id="color-picker" value="#000000">
+    <input type="range" id="brush-size" min="1" max="20" value="3">
+    <button id="save-btn">Сохранить доску</button>
+</div>
+
+
+<div id="scroll-container" style="height: 80vh; overflow-y: auto; background: #f0f0f0;">
+    <div id="drawing-container" style="height: 80vh; background: #f0f0f0; position: relative;">
+        <canvas id="drawing-canvas"></canvas>
+    </div>
+</div>
+
+<script>
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+    let currentColor = '#000000';
+    let brushSize = 3;
+    let isErasing = false;
+    const boardId = "{{ board.id }}";
+
+    const socket = new WebSocket(`ws://${window.location.host}/ws/board/${boardId}/`);
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'drawing') {
+            drawFromData(data.message);
+        } else if (data.type === 'clear') {
+            clearCanvas();
+        }
+    };
+
+    socket.onopen = function() {
+        console.log("WebSocket connection established");
+    };
+
+    socket.onerror = function(error) {
+        console.error("WebSocket error:", error);
+    };
+
+    socket.onclose = function() {
+        console.log("WebSocket connection closed");
+    };
+
+    const canvas = document.getElementById('drawing-canvas');
+    const context = canvas.getContext('2d');
+
+    // Установка размеров canvas
+    function resizeCanvas() {
+        canvas.width = document.getElementById('drawing-container').offsetWidth;
+        canvas.height = document.getElementById('drawing-container').offsetHeight;
+        canvas.height = 4000;
+
+        // Если есть сохраненные данные, восстановим их
+        {% if drawing_data %}
+            const savedDrawing = "{{ drawing_data|escapejs }}";
+            if (savedDrawing) {
+                const img = new Image();
+                img.onload = function() {
+                    context.drawImage(img, 0, 0);
+                }
+                img.src = savedDrawing;
+            }
+        {% endif %}
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function startDrawing(event) {
+        isDrawing = true;
+        lastX = event.offsetX;
+        lastY = event.offsetY;
+    }
+
+    function draw(event) {
+        if (!isDrawing) return;
+
+        context.beginPath();
+        context.moveTo(lastX, lastY);
+        context.lineTo(event.offsetX, event.offsetY);
+
+        if (isErasing) {
+            context.globalCompositeOperation = 'destination-out';
+            context.strokeStyle = 'rgba(0,0,0,1)';
+        } else {
+            context.globalCompositeOperation = 'source-over';
+            context.strokeStyle = currentColor;
+        }
+
+        context.lineWidth = brushSize;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.stroke();
+
+        sendDrawingData({
+            x: event.offsetX,
+            y: event.offsetY,
+            lastX: lastX,
+            lastY: lastY,
+            color: currentColor,
+            size: brushSize,
+            isErasing: isErasing
+        });
+
+        lastX = event.offsetX;
+        lastY = event.offsetY;
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+    }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+
+    function sendDrawingData(data) {
+        socket.send(JSON.stringify({
+            type: 'drawing',
+            message: data,
+        }));
+    }
+
+    function drawFromData(data) {
+        context.beginPath();
+        context.moveTo(data.lastX, data.lastY);
+        context.lineTo(data.x, data.y);
+
+        if (data.isErasing) {
+            context.globalCompositeOperation = 'destination-out';
+            context.strokeStyle = 'rgba(0,0,0,1)';
+        } else {
+            context.globalCompositeOperation = 'source-over';
+            context.strokeStyle = data.color;
+        }
+
+        context.lineWidth = data.size;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.stroke();
+    }
+
+    function clearCanvas() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    document.getElementById('clear-btn').addEventListener('click', function() {
+        socket.send(JSON.stringify({
+            type: 'clear',
+            message: {}
+        }));
+    });
+
+    document.getElementById('eraser-btn').addEventListener('click', function() {
+        isErasing = !isErasing;
+        this.classList.toggle('active');
+    });
+
+    document.getElementById('color-picker').addEventListener('input', function(e) {
+        currentColor = e.target.value;
+        isErasing = false;
+        document.getElementById('eraser-btn').classList.remove('active');
+    });
+
+    document.getElementById('brush-size').addEventListener('input', function(e) {
+        brushSize = e.target.value;
+    });
+
+    document.getElementById('save-btn').addEventListener('click', function() {
+        const drawingDataUrl = canvas.toDataURL();
+
+        fetch(`/${boardId}/save_drawing/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ 'drawing_data': drawingDataUrl })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert("Доска сохранена!");
+            } else {
+                alert("Ошибка при сохранении доски.");
+            }
+        });
+    });
+</script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+}
+
+#drawing-container {
+    width: 100%;
+    max-width: 800px;
+    position: relative;
+    margin: 20px auto;
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.2);
+    border-radius: 5px;
+    background: #f8f8ff;
+
+}
+
+canvas {
+    border: 1px solid #b0e2ff;
+    display: block;
+    background: #f8f8ff;
+
+}
+
+
+.toolbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    background: #e7f5ff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid #b0e2ff;
+}
+
+.toolbar button,
+.toolbar input[type="color"],
+.toolbar input[type="range"] {
+    padding: 8px 12px;
+    border: 1px solid #b0e2ff;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.toolbar button:hover {
+    background-color: #b0e2ff;
+    color: #fff;
+}
+
+
+.toolbar button#eraser-btn.active {
+    background-color: #b0e2ff;
+    color: #fff;
+}
+
+
+
+#scroll-container {
+    height: 80vh;
+    overflow-y: auto;
+    background: #f8f8ff;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.2);
+    border-radius: 5px;
+}
+
+</style>
+
+{% endblock %}
