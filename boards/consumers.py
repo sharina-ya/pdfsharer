@@ -33,7 +33,15 @@ class BoardConsumer(AsyncWebsocketConsumer):
     async def annotation_message(self, event):
         await self.send(text_data=json.dumps(event['data']))
 
+    async def board_message(self, event):
+        message = event['message']
 
+        await self.send(text_data=json.dumps({
+            'message': message
+        }))
+
+'''
     async def board_message(self, event):
         message = event['message']
         await self.send(text_data=json.dumps(message))
+'''

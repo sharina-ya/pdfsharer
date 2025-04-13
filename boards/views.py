@@ -16,6 +16,8 @@ def home(request):
     boards = Board.objects.all().order_by('-created_at')
     return render(request, 'boards/home.html', {'boards': boards})
 
+def hellopage(request):
+    return render(request, 'hellopage.html')
 
 def create_board(request):
     if request.method == 'POST':
@@ -33,7 +35,7 @@ def board_view(request, board_id):
 
     if board.pdf_file:
         # Для PDF используем специальный шаблон
-        return render(request, 'boards/pdf4.html', {
+        return render(request, 'boards/pdf2.html', {
             'board': board,
             'pdf_url': board.pdf_file.url,
             'saved_drawing': board.drawing_data
@@ -45,9 +47,8 @@ def board_view(request, board_id):
                 board.save()
                 return JsonResponse({'status': 'success'})
 
-        return render(request, 'boards/board2.html', {
+        return render(request, 'boards/board.html', {
             'board': board,
-
             'drawing_data': board.drawing_data
         })
 
@@ -59,7 +60,7 @@ def show_pdf(request, board_id):
 
     #file_path = board.pdf_file.path
     #return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
-    return render(request, 'boards/pdf4.html', {
+    return render(request, 'boards/pdf2.html', {
         'board': board,
         'pdf_url': board.pdf_file.url
     })
@@ -70,15 +71,17 @@ def delete_board(request, board_id):
     return redirect('boards:home')
 
 
-
 @csrf_exempt
 def save_drawing(request, board_id):
     if request.method == 'POST':
         board = get_object_or_404(Board, id=board_id)
-        data = json.loads(request.body)
-        board.drawing_data = data.get('drawing_data')
-        board.save()
-        return JsonResponse({'status': 'success'})
+        try:
+            data = json.loads(request.body)
+            board.drawing_data = data.get('drawing_data')
+            board.save()
+            return JsonResponse({'status': 'success'})
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     return JsonResponse({'status': 'error'}, status=400)
 
 def broadcast_drawing(board_id, data):
