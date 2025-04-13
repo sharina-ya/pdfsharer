@@ -6,7 +6,7 @@ import sys
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(BASE_DIR))
+sys.path.append(str(BASE_DIR))  # Добавляем корень в пути Python
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -144,7 +144,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Разрешенные хосты
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.193.150.77', '192.168.120.246', '10.23.29.39', '192.168.95.246']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.23.18.97', '192.168.120.246', '10.23.29.39', '192.168.95.246']
 
 
 # Настройки для реального времени
@@ -156,5 +156,5 @@ CHANNEL_LAYERS = {
         },
     },
 }
-LOGIN_REDIRECT_URL = 'home'  
-LOGOUT_REDIRECT_URL = 'home'  
+LOGIN_REDIRECT_URL = 'home'  # куда перекидывать после входа
+LOGOUT_REDIRECT_URL = 'home'  # куда перекидывать после выхода
