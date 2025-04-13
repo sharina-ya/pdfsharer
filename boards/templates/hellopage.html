@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добро пожаловать</title>
+    <style>
+        body {
+            font-family: 'Georgia', serif; /* Заменен шрифт */
+            background-color: #f0f8ff;
+            background-image: url('https://img-s-msn-com.akamaized.net/tenant/amp/entityid/AA1qMiSG.img?w=1200&h=630&m=4&q=79'); /* URL вашей картинки */
+            background-size: cover; /* Картинка на весь фон */
+            background-position: center; /* Центрирование картинки */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            color: white; /* Изменение цвета текста для лучшей видимости на фоне */
+        }
+
+        h1 {
+            color: #ffffff;
+            margin-bottom: 40px;
+            font-size: 2.5em; /* Увеличенный размер шрифта */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Тень для текста */
+        }
+
+        .button {
+            padding: 20px 40px;
+            width: 300px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            background-color: rgba(93, 173, 226, 0.7); /* Полупрозрачный фон */
+            box-shadow: 0 0 10px #87ceeb;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+            font-size: 1.2em;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Тень для текста */
+        }
+
+        .button:hover {
+            background-color: rgba(70, 130, 180, 0.7);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <h1></h1>
+    <a href="{% url 'boards:login' %}"><button class="button">Войти</button></a>
+    <a href="{% url 'boards:register' %}"><button class="button">Зарегистрироваться</button></a>
+</body>
+</html>
