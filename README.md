@@ -32,10 +32,7 @@ PDFSharer — это веб-приложение для совместной р�
 ## 🔧 Установка
 
 1. Клонирование репозитория:
-   
-Bash
-
-
+
    git clone https://github.com/sharina-ya/pdfsharer.git
    cd pdfsharer
    
@@ -45,9 +42,6 @@ Bash
 
 3. Запустите приложение:
    
-Bash
-
-
    docker-compose up --build
    
 
