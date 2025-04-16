@@ -10,12 +10,10 @@
     <button id="save-btn">Сохранить доску</button>
 </div>
 
-<div id="pdf-scroll-container" style="height: 80vh; overflow-y: auto; background: #f0f0f0;">
-    <div id="pdf-pages-wrapper" style="padding: 20px;">
-        {% if board.pdf_file %}
-            <div id="pdf-viewer"></div>
-        {% endif %}
-    </div>
+<div id="pdf-container">
+    {% if board.pdf_file %}
+        <div id="pdf-viewer"></div>
+    {% endif %}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -97,10 +95,9 @@
             drawingCanvasPage.addEventListener('mouseout', stopDrawing);
         }
 
-        // Загрузка сохраненных рисунков
         loadSavedDrawings();
 
-        document.getElementById('pdf-scroll-container').scrollTo(0, 0);
+        document.getElementById('pdf-container').scrollTo(0, 0);
     }
 
     function startDrawing(event) {
@@ -203,6 +200,7 @@
     }
 
     document.getElementById('clear-btn').addEventListener('click', function() {
+        clearCanvas();
         sendClearSignal();
     });
 
@@ -220,54 +218,57 @@
     document.getElementById('brush-size').addEventListener('input', function(e) {
         brushSize = e.target.value;
     });
+
     document.getElementById('save-btn').addEventListener('click', function() {
-    const pdfViewer = document.getElementById('pdf-viewer');
-    let drawingData = [];
+        const pdfViewer = document.getElementById('pdf-viewer');
+        let drawingData = [];
 
-    canvases.forEach((canvas, index) => {
-        const drawingDataUrl = canvas.toDataURL();
-        drawingData.push({
-            pageNumber: index + 1,
-            drawingData: drawingDataUrl
+        canvases.forEach((canvas, index) => {
+            const drawingDataUrl = canvas.toDataURL();
+            drawingData.push({
+                pageNumber: index + 1,
+                drawingData: drawingDataUrl
+            });
         });
-    });
 
-    fetch(`/${boardId}/save_drawing/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({ drawing_data: JSON.stringify(drawingData) })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert("Доска сохранена!");
-        } else {
-            alert("Ошибка при сохранении доски.");
-        }
-    });
-});
-    function loadSavedDrawings() {
-    {% if board.drawing_data %}
-        const savedDrawingData = JSON.parse('{{ board.drawing_data|escapejs }}');
-        savedDrawingData.forEach(item => {
-            const pageNumber = item.pageNumber;
-            const drawingDataUrl = item.drawingData;
-
-            const canvas = canvases[pageNumber - 1];
-            if (canvas) {
-                const context = canvas.getContext('2d');
-                const img = new Image();
-                img.onload = function() {
-                    context.drawImage(img, 0, 0);
-                }
-                img.src = drawingDataUrl;
+        fetch(`/${boardId}/save_drawing/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ drawing_data: JSON.stringify(drawingData) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert("Доска сохранена!");
+            } else {
+                alert("Ошибка при сохранении доски.");
             }
         });
-    {% endif %}
-}
+    });
+
+    function loadSavedDrawings() {
+        {% if board.drawing_data %}
+            const savedDrawingData = JSON.parse('{{ board.drawing_data|escapejs }}');
+            savedDrawingData.forEach(item => {
+                const pageNumber = item.pageNumber;
+                const drawingDataUrl = item.drawingData;
+
+                const canvas = canvases[pageNumber - 1];
+                if (canvas) {
+                    const context = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = function() {
+                        context.drawImage(img, 0, 0);
+                    }
+                    img.src = drawingDataUrl;
+                }
+            });
+        {% endif %}
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         {% if board.pdf_file %}
           renderPDF("{{ board.pdf_file.url }}");
@@ -275,32 +276,60 @@
     });
 </script>
 
-
 <style>
-
 body {
     font-family: 'Arial', sans-serif;
-    background-color: #fff;
+    background-color: #e6f7ff;
     color: #333;
     margin: 0;
     padding: 0;
+    overflow: hidden;
 }
 
-
-#pdf-scroll-container {
+#pdf-container {
     width: 100%;
-    max-width: 800px;
-    margin: 20px auto;
-    box-shadow: 0 0 15px rgba(0, 123, 255, 0.2);
-    border-radius: 5px;
-
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    padding-top: 70px;
+    box-sizing: border-box;
 }
 
+#pdf-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#pdf-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#pdf-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 123, 255, 0.5);
+    border-radius: 4px;
+}
+
+#pdf-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 123, 255, 0.8);
+}
+
+#pdf-viewer {
+    width: 100%;
+    max-width: 940px;
+    margin: auto;
+    border-radius: 8px;
+    padding: 5px;
+
+}
 
 .pdf-page {
     background: white;
-    margin: 10px auto;
+    margin: 20px auto;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 5px;
 }
 
 #pdf-pages-wrapper {
@@ -310,18 +339,22 @@ body {
 }
 
 .toolbar {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     z-index: 100;
     background: #e7f5ff;
     padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2);
+
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2),
+                0 2px 5px rgba(0, 123, 255, 0.2);
     display: flex;
     gap: 10px;
     align-items: center;
     border: 1px solid #b0e2ff;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
 }
 
 .toolbar button,
@@ -341,12 +374,9 @@ body {
     color: #fff;
 }
 
-
 .toolbar button#eraser-btn.active {
     background-color: #b0e2ff;
     color: #fff;
 }
-
 </style>
-
 {% endblock %}
