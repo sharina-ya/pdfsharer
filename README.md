@@ -33,6 +33,7 @@ PDFSharer — это веб-приложение для совместной р�
 
 1. Клонирование репозитория:
 
+bash
    git clone https://github.com/sharina-ya/pdfsharer.git
    cd pdfsharer
    
@@ -41,7 +42,8 @@ PDFSharer — это веб-приложение для совместной р�
    - Убедитесь, что Docker и Docker Compose установлены на вашем компьюте.
 
 3. Запустите приложение:
-   
+
+bash
    docker-compose up --build
    
 
@@ -54,3 +56,15 @@ PDFSharer — это веб-приложение для совместной р�
   - Изменение размера кисти.
   - Ластик для удаления элементов.
 - Синхронизируйте изменения с другими участниками в реальном времени.
+
+## 📸 Скриншоты
+![image](https://github.com/user-attachments/assets/a558d5c3-5fbf-47ff-a2b9-aab7e81db63e)
+![image](https://github.com/user-attachments/assets/fc01393e-4d18-4586-9045-e53b3eb213de)
+![image](https://github.com/user-attachments/assets/8f4a8d75-7b2c-4f2c-9251-11621a75e2b3)
+![image](https://github.com/user-attachments/assets/21fb021c-4e28-4f32-a1c1-287909f5d272)
+
+
+
+
+
+
